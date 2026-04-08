@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Code Decoder</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b101e;
+            --text-color: #f8fafc;
+            --accent-color: #00f0ff;
+            --secondary-text: #64748b;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 3rem 0;
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08), transparent 25%),
+                              radial-gradient(circle at 85% 30%, rgba(138, 43, 226, 0.1), transparent 25%);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1400px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(20px);
+            position: relative;
+            z-index: 10;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, var(--accent-color), transparent, #8a2be2);
+            z-index: -1;
+            border-radius: 26px;
+            opacity: 0.15;
+            transition: opacity 0.5s;
+        }
+        
+        .container:hover::before {
+            opacity: 0.3;
+        }
+
+        .layout-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            align-items: stretch;
+            width: 100%;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .right-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* Switch to flex-start for scrolling */
+            overflow: auto; /* Allow scrolling if canvas needs space */
+            position: relative;
+            min-height: 600px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .title-group h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+            text-align: left;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+            margin-top: 0;
+        }
+
+        .title-group p.subtitle {
+            text-align: left;
+            color: var(--secondary-text);
+            font-size: 0.85rem;
+            margin-bottom: 0;
+            letter-spacing: 1px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 2rem;
+            background: rgba(0, 0, 0, 0.6); /* Darker background for contrast */
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #ffffff; /* Bright white text */
+            font-size: 2rem;
+            font-family: 'Space Grotesk', Courier, monospace;
+            padding: 1rem 0;
+            resize: none;
+            outline: none;
+            text-align: center;
+            letter-spacing: 8px; /* Tighter letter spacing on dots and dashes */
+            font-weight: 700;
+        }
+
+        textarea::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+            letter-spacing: 5px;
+            font-weight: 400;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        button {
+            background: rgba(0, 240, 255, 0.05); /* Slight cyan tint */
+            border: 1px solid rgba(0, 240, 255, 0.3); /* Stronger visible border */
+            color: #e2e8f0;
+            padding: 0.8rem 1.8rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.05);
+        }
+
+        button:hover {
+            background: rgba(0, 240, 255, 0.1);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+
+        .output-container {
+            text-align: center;
+            min-height: 80px;
+            padding: 1.2rem;
+            background: rgba(0, 240, 255, 0.03);
+            border-radius: 12px;
+            border: 1px dashed rgba(0, 240, 255, 0.2);
+            position: relative;
+        }
+
+        .output-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--accent-color);
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        #output {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #fff;
+            word-wrap: break-word;
+            min-height: 2.5rem;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+            letter-spacing: 4px;
+        }
+
+        /* Canvas Styles */
+        #treeCanvas {
+            width: 100%;
+            height: auto;
+            min-width: 1200px; /* Force minimum width to prevent crushing / layout overlap */
+            display: block;
+            margin: auto;
+        }
+        
+        .tree-label {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .instructions {
+            font-size: 0.8rem;
+            color: var(--secondary-text);
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .instructions span {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 12px;
+        }
+        
+        .instructions b {
+            color: var(--accent-color);
+            margin-right: 6px;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 1000px) {
+            .layout-grid {
+                grid-template-columns: 1fr;
+            }
+            .container { padding: 1.5rem; }
+            .right-panel {
+                min-height: 450px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header-container">
+            <div class="title-group">
+                <h1>Morse Decoder</h1>
+                <p class="subtitle">Real-time binary tree visualization logic</p>
+            </div>
+            
+            <div class="instructions">
+                <span><b>.</b> Dot</span>
+                <span><b>-</b> Dash</span>
+                <span><b>Space</b> Letter break</span>
+                <span><b>3x Space</b> Word break</span>
+            </div>
+        </div>
+
+        <div class="layout-grid">
+            <div class="left-panel">
+                <div class="input-group">
+                    <textarea id="morseInput" rows="2" placeholder=".... . .-.. .-.. ---" spellcheck="false"></textarea>
+                </div>
+
+                <div class="controls">
+                    <button onclick="appendSymbol('.')">Dot (.)</button>
+                    <button onclick="appendSymbol('-')">Dash (-)</button>
+                    <button onclick="appendSpace()">Space</button>
+                    <button onclick="clearAll()">Clear</button>
+                </div>
+
+                <div class="output-container">
+                    <div class="output-label">Decoded Text</div>
+                    <div id="output"></div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="tree-label">Live BST Traversal</div>
+                <canvas id="treeCanvas" width="2400" height="1100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Morse Tree Node
+        class Node {
+            constructor(data = '') {
+                this.data = data;
+                this.dot = null;
+                this.dash = null;
+            }
+        }
+
+        // Build the Morse Tree
+        const root = new Node();
+        // ... (alphabet array is same) ... //
+        const alphabet = {
+            'E': '.', 'T': '-', 
+            'I': '..', 'A': '.-', 'N': '-.', 'M': '--',
+            'S': '...', 'U': '..-', 'R': '.-.', 'W': '.--', 'D': '-..', 'K': '-.-', 'G': '--.', 'O': '---',
+            'H': '....', 'V': '...-', 'F': '..-.', 'L': '.-..', 'P': '.--.', 'J': '.---', 'B': '-...', 'X': '-..-', 'C': '-.-.', 'Y': '-.--', 'Z': '--..', 'Q': '--.-',
+            '5': '.....', '4': '....-', '3': '...--', '2': '..---', '1': '.----', '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----'
+        };
+
+        for (const [char, code] of Object.entries(alphabet)) {
+            let current = root;
+            for (const symbol of code) {
+                if (symbol === '.') {
+                    if (!current.dot) current.dot = new Node();
+                    current = current.dot;
+                } else if (symbol === '-') {
+                    if (!current.dash) current.dash = new Node();
+                    current = current.dash;
+                }
+            }
+            current.data = char;
+        }
+
+        // -----------------------------------------------------
+        // CANVAS VISUALIZATION LOGIC
+        // -----------------------------------------------------
+        const canvas = document.getElementById('treeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function assignNodeCoords(node, x, y, dx, depth) {
+            if(!node) return;
+            node.x = x;
+            node.y = y;
+            // Strict factor of 2 reduction cleanly separates the binary tree logically 
+            const reduce = 2.0; 
+            const newDx = dx / reduce;
+            const dy = depth === 0 ? 180 : 160;
+
+            if (node.dot) assignNodeCoords(node.dot, x - dx, y + dy, newDx, depth + 1);
+            if (node.dash) assignNodeCoords(node.dash, x + dx, y + dy, newDx, depth + 1);
+        }
+        
+        // At 2400 width, starting dx=600 cleanly distributes the whole 5-depth tree left and right.
+        assignNodeCoords(root, canvas.width / 2, 70, canvas.width / 4, 0);
+
+        function isPathActive(path, activeSeq) {
+            if(!activeSeq) return path === '';
+            return activeSeq.startsWith(path);
+        }
+
+        function drawEdges(node, currentPath, activeSeq) {
+            if(!node) return;
+            const active = isPathActive(currentPath, activeSeq);
+
+            if(node.dot) {
+                const childActive = active && isPathActive(currentPath + '.', activeSeq);
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y);
+                ctx.lineTo(node.dot.x, node.dot.y);
+                ctx.lineWidth = childActive ? 6 : 2; /* scaled up for 2400 frame */
+                ctx.strokeStyle = childActive ? '#00f0ff' : 'rgba(255, 255, 255, 0.15)';
+                ctx.shadowBlur = childActive ? 25 : 0;
+                ctx.shadowColor = '#00f0ff';
+                ctx.stroke();
+                drawEdges(node.dot, currentPath + '.', activeSeq);
+            }
+            if(node.dash) {
+                const childActive = active && isPathActive(currentPath + '-', activeSeq);
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y);
+                ctx.lineTo(node.dash.x, node.dash.y);
+                ctx.lineWidth = childActive ? 6 : 2; /* scaled up for 2400 frame */
+                ctx.strokeStyle = childActive ? '#00f0ff' : 'rgba(255, 255, 255, 0.15)';
+                ctx.shadowBlur = childActive ? 25 : 0;
+                ctx.shadowColor = '#00f0ff';
+                ctx.stroke();
+                drawEdges(node.dash, currentPath + '-', activeSeq);
+            }
+        }
+
+        function drawNodes(node, currentPath, activeSeq) {
+            if(!node) return;
+            const active = isPathActive(currentPath, activeSeq);
+            const isCurrent = currentPath === activeSeq && activeSeq !== '';
+            const isRoot = currentPath === '';
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 28, 0, Math.PI*2); /* Scaled slightly larger for resolution */
+            
+            // Fill
+            if (isCurrent) {
+                ctx.fillStyle = '#ff007f'; // Hot pink focus
+                ctx.shadowBlur = 35;
+                ctx.shadowColor = '#ff007f';
+            } else if (active) {
+                ctx.fillStyle = '#00f0ff'; // Neon Cyan path
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = '#00f0ff';
+            } else if (isRoot && activeSeq === '') {
+                ctx.fillStyle = '#ff007f'; // Start state
+                ctx.shadowBlur = 35;
+                ctx.shadowColor = '#ff007f';
+            } else {
+                ctx.fillStyle = '#1e293b'; // Lighter inactive backdrop
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#000'; 
+            }
+            ctx.fill();
+
+            // Border
+            ctx.lineWidth = (active || isCurrent) ? 4 : 3;
+            ctx.strokeStyle = (active || isCurrent) ? '#fff' : 'rgba(255,255,255,0.4)';
+            ctx.stroke();
+
+            // Text
+            ctx.shadowBlur = 0;
+            ctx.font = '22px "Space Grotesk"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fontWeight = 'bold';
+            // Use significantly brighter text for inactive state
+            ctx.fillStyle = (active || isCurrent || (isRoot && activeSeq === '')) ? '#ffffff' : '#f8fafc';
+            const displayChar = isRoot ? 'RT' : node.data;
+            ctx.fillText(displayChar, node.x, node.y);
+
+            if(node.dot) drawNodes(node.dot, currentPath + '.', activeSeq);
+            if(node.dash) drawNodes(node.dash, currentPath + '-', activeSeq);
+        }
+
+        function renderTree(activeSequence = '') {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawEdges(root, '', activeSequence);
+            drawNodes(root, '', activeSequence);
+        }
+
+        // Initial render
+        renderTree();
+
+        // -----------------------------------------------------
+
+        function decodeChar(code) {
+            let current = root;
+            for (const symbol of code) {
+                if (symbol === '.') {
+                    if (!current.dot) return '?';
+                    current = current.dot;
+                } else if (symbol === '-') {
+                    if (!current.dash) return '?';
+                    current = current.dash;
+                }
+            }
+            return current.data || '?';
+        }
+
+        function decodeMessage(message) {
+            if (!message.trim()) return '';
+            
+            let result = '';
+            let currentSymbolSeq = '';
+            
+            for (let i = 0; i < message.length; ++i) {
+                const c = message[i];
+                
+                if (c === '.' || c === '-') {
+                    currentSymbolSeq += c;
+                } else if (c === ' ') {
+                    if (currentSymbolSeq.length > 0) {
+                        result += decodeChar(currentSymbolSeq);
+                        currentSymbolSeq = '';
+                    }
+                    
+                    if (i + 1 < message.length && message[i+1] === ' ') {
+                        if (result.length === 0 || result[result.length - 1] !== ' ') {
+                            result += ' ';
+                        }
+                    }
+                }
+            }
+            
+            if (currentSymbolSeq.length > 0) {
+                result += decodeChar(currentSymbolSeq);
+            }
+            
+            return result;
+        }
+
+        const inputEl = document.getElementById('morseInput');
+        const outputEl = document.getElementById('output');
+
+        function updateOutput() {
+            const val = inputEl.value;
+            outputEl.textContent = decodeMessage(val);
+            
+            // Extract the sequence currently being typed to visualize it
+            const parts = val.split(' ');
+            const activeVal = parts.length > 0 ? parts[parts.length - 1] : '';
+            renderTree(activeVal);
+        }
+
+        inputEl.addEventListener('input', (e) => {
+            // Filter invalid characters
+            const val = e.target.value;
+            const filtered = val.replace(/[^.\- ]/g, '');
+            if (val !== filtered) {
+                e.target.value = filtered;
+            }
+            updateOutput();
+        });
+
+        function appendSymbol(sym) {
+            inputEl.value += sym;
+            inputEl.focus();
+            updateOutput();
+        }
+
+        function appendSpace() {
+            inputEl.value += ' ';
+            inputEl.focus();
+            updateOutput();
+        }
+
+        function clearAll() {
+            inputEl.value = '';
+            inputEl.focus();
+            updateOutput();
+        }
+    </script>
+</body>
+</html>
