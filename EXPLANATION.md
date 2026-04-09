@@ -1,81 +1,132 @@
-# Technical Explanation: Smart Morse Network Simulation
+# Line-by-Line Explanation: Smart Morse Network Simulation
 
-## 📖 Overview
-This project is a high-performance C++ simulation that combines **Graph Theory** (for physical routing) and **Tree Data Structures** (for communication protocols). It models a real-world scenario where university campus devices communicate over a weighted network using Morse signals.
+This document provides a detailed breakdown of `main.cpp` for the Smart Morse Network Simulation project.
 
 ---
 
-## 🏗️ System Components
+## 1. Headers and Includes
+```cpp
+#include <iostream>   // For input and output (std::cout, std::cin)
+#include <memory>     // For std::unique_ptr (Smart Pointers/RAII)
+#include <string>     // For handling text strings
+#include <vector>     // For dynamic arrays (storing paths)
+#include <map>        // For the Adjacency List and Encoding Map
+#include <queue>      // For the Priority Queue used in Dijkstra
+#include <algorithm>  // For std::reverse (path reconstruction)
+#include <limits>     // For std::numeric_limits (setting "Infinity" distances)
+#include <set>        // For keeping track of unique node names
+```
 
-### 1. Morse Code Subsystem (`MorseSystem`)
-**Approach:** Hybrid Binary Tree (Trie) and Hash Map.
+---
 
-*   **Decoding (Morse to Text):**
-    *   **Logic:** Uses a binary tree where every "Dot" is a move to the left child and every "Dash" is a move to the right child.
-    *   **Performance:** $O(L)$ where $L$ is the length of the Morse code sequence.
-    *   **Benefit:** Extremely memory efficient and follow safe memory patterns using `std::unique_ptr`.
-*   **Encoding (Text to Morse):**
-    *   **Logic:** Uses a `std::map<char, std::string>` for $O(1)$ average-time lookup per character.
-    *   **Constraint:** Automatically handles Uppercase/Lowercase conversion via `std::toupper`.
+## 2. The MorseSystem Class (Trie + Map)
 
-### 2. Network Routing Subsystem (`CampusNetwork`)
-**Approach:** Adjacency List with Dijkstra's Shortest Path.
+### The Node Structure
+```cpp
+struct Node {
+    char data;                 // The character (e.g., 'A')
+    std::unique_ptr<Node> dot;  // Pointer to the "Left" child (Dot)
+    std::unique_ptr<Node> dash; // Pointer to the "Right" child (Dash)
+};
+```
+*   **Line-by-line**: We use `std::unique_ptr` so that modern C++ handles memory automatically. When the `MorseSystem` is destroyed, the entire tree is deleted without memory leaks.
 
-*   **Data Representation:** 
-    *   Uses a `std::map<std::string, std::vector<Edge>>` to store connections. 
-    *   This is the **Adjacency List** pattern, which is optimal for sparse graphs like a campus layout.
-*   **Dijkstra's Algorithm Implementation:**
-    ```cpp
-    using NodeDist = std::pair<int, std::string>;
+### Encoding Logic (Text -> Morse)
+```cpp
+std::string encode(const std::string& text) {
+    std::string result;
+    for (char c : text) {
+        char upper_c = std::toupper(c);
+        if (upper_c == ' ') {
+            result += "   "; // Add 3 spaces for word separation
+        } else if (encoding_map.count(upper_c)) {
+            result += encoding_map[upper_c] + " "; // Fetch Morse from map
+        }
+    }
+    return result;
+}
+```
+*   **Logic**: Loops through the user's string. If it sees 'H', it looks up the code in the map and adds `.... ` to the result string.
+
+### Decoding Logic (Morse -> Text)
+```cpp
+char decode_char(const std::string& code) const {
+    Node* current = root.get(); // Start at the root of the tree
+    for (char symbol : code) {
+        if (symbol == '.') current = current->dot.get();
+        else if (symbol == '-') current = current->dash.get();
+    }
+    return current->data; // Return the character found at that leaf
+}
+```
+*   **Logic**: This is a **Trie Traversal**. For every dot or dash in a code, we walk down the tree. If we follow `- .`, we land on node 'N'.
+
+---
+
+## 3. The CampusNetwork Class (Graphs & Dijkstra)
+
+### Adjacency List
+```cpp
+std::map<std::string, std::vector<Edge>> adj;
+```
+*   **Explanation**: This is the heart of the graph. It maps a location name (Key) to a list of its neighbors (Value).
+
+### Dijkstra’s Algorithm Implementation
+```cpp
+std::vector<std::string> findShortestPath(...) {
+    std::map<std::string, int> dist; // Stores distance from start to every node
+    std::map<std::string, std::string> parent; // Tracks where we came from
+    
+    // Set all distances to "Infinite" initially
+    for (const auto& node : nodes) dist[node] = std::numeric_limits<int>::max();
+
+    // Priority Queue: Always picks the node with the SHORTEST current distance
     std::priority_queue<NodeDist, std::vector<NodeDist>, std::greater<NodeDist>> pq;
-    ```
-    *   **Greedy Selection:** We use a `std::priority_queue` to always select the node with the absolute minimum distance from the current pool.
-    *   **Path Reconstruction:** A `parent` map stores the "best previous hop" for every node. Once the destination is reached, we trace back from `Destination -> Source` and reverse the list to get the final path.
+
+    dist[start] = 0;
+    pq.push({0, start});
+
+    while (!pq.empty()) {
+        std::string u = pq.top().second; // Get node with smallest distance
+        pq.pop();
+
+        for (const auto& edge : adj[u]) {
+            // RELAXATION: If we found a cheaper way to get here, update it
+            if (dist[u] + edge.weight < dist[edge.to]) {
+                dist[edge.to] = dist[u] + edge.weight;
+                parent[edge.to] = u; // Remember the path
+                pq.push({dist[edge.to], edge.to});
+            }
+        }
+    }
+}
+```
+*   **Viva Note**: Explain that Dijkstra is "Greedy." It always explores the closest node first, guaranteeing the absolute shortest path in a graph with positive weights.
 
 ---
 
-## ⚙️ Detailed Algorithm Walkthrough
+## 4. The Simulation Runner (Main Function)
 
-### Sending a Morse Message: Step-by-Step
+### Default Graph Setup
+```cpp
+network.addConnection("Hostel", "Lab", 2);
+network.addConnection("Hostel", "Library", 5);
+```
+*   **Explanation**: This populates our "Smart Campus" with the initial 4 buildings and their distances.
 
-| Step | Action | Logic Applied |
-|:---|:---|:---|
-| **1** | **Input Message** | User enters "LAB" |
-| **2** | **Encoding** | `MorseSystem` converts "LAB" into `.-.. .- -...` |
-| **3** | **Initialize Dijkstra** | `dist["Hostel"] = 0`, all others = $\infty$ |
-| **4** | **Relaxation** | The algorithm "relaxes" edges. If `dist[u] + weight < dist[v]`, update `dist[v]`. |
-| **5** | **Path Found** | Finds Shortest Path: `Hostel -> Lab -> Admin` (Cost: 6) |
-| **6** | **Simulation** | The loop prints the "Content: `.-.. .- -...`" at each node in the path. |
-| **7** | **Final Decoding** | At destination (Admin), the Morse string is passed to the Binary Tree to get "LAB". |
-
----
-
-## 🛠️ Technical Decisions & Trade-offs
-
-### Decision 1: Adjacency List vs. Adjacency Matrix
-*   **Chosen:** Adjacency List.
-*   **Reason:** Campus networks don't have every building connected to every other building. A list saves significant memory ($O(V+E)$) compared to a matrix ($O(V^2)$).
-
-### Decision 2: Smart Pointers (`std::unique_ptr`)
-*   **Chosen:** `std::unique_ptr` for MorseTree nodes.
-*   **Reason:** Prevents memory leaks. In a viva, this shows mastery of **RAII (Resource Acquisition Is Initialization)**—the tree manages its own memory without needing a destructor.
-
-### Decision 3: Priority Queue in Dijkstra
-*   **Chosen:** `std::priority_queue` with `std::greater`.
-*   **Reason:** Without a priority queue, Dijkstra would be $O(V^2)$. With it, it becomes $O(E \log V)$, which is professional-grade optimization.
+### The Live Simulation Display
+```cpp
+for (size_t i = 0; i < path.size(); ++i) {
+    std::cout << "Step " << i+1 << ": Node [" << path[i] << "] ";
+    // Logic to label Origin, Relay, or Destination...
+    std::cout << "\n   Signal Content: " << encoded_msg << "\n";
+}
+```
+*   **Explanation**: This loop walks through the `path` vector (which Dijkstra filled) and prints the status of the "Signal" at every hop.
 
 ---
 
-## 🚀 How to Run & Verify
-1. **Compile:** `g++ -std=c++17 main.cpp -o main`
-2. **Run:** `./main`
-3. **Test Case:**
-   *   Source: `Hostel`, Dest: `Admin`, Msg: `HELLO`
-   *   **Expectation:** Path: `Hostel -> Lab -> Admin`, Cost: 6.
-
----
-
-## 👨‍🏫 Viva Questions (Predictor)
-1. **Why use a Binary Tree for Morse?** Because Morse is a prefix code. A tree allows us to decode as we read each symbol without looking ahead.
-2. **What happens if a node has no path?** Dijkstra will leave its distance as `std::numeric_limits<int>::max()`, and the `findShortestPath` function will return an empty vector.
-3. **Is the graph directed?** No, in this simulation, it's undirected (if A connects to B, B connects to A).
+## Summary for Viva
+1.  **Complexity**: Dijkstra is $O(E \log V)$ and Morse decoding is $O(L)$. Both are highly efficient.
+2.  **Safety**: We use `std::unique_ptr` and `std::string` instead of raw pointers and `char*` arrays to ensure the program is crash-proof.
+3.  **Extensibility**: The user can add new buildings (nodes) at runtime, and Dijkstra will recalculate the paths instantly.
