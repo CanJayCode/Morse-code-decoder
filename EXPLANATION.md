@@ -1,132 +1,101 @@
-# Line-by-Line Explanation: Smart Morse Network Simulation
+# Smart Morse Network Simulation: Comprehensive Explanation
 
-This document provides a detailed breakdown of `main.cpp` for the Smart Morse Network Simulation project.
-
----
-
-## 1. Headers and Includes
-```cpp
-#include <iostream>   // For input and output (std::cout, std::cin)
-#include <memory>     // For std::unique_ptr (Smart Pointers/RAII)
-#include <string>     // For handling text strings
-#include <vector>     // For dynamic arrays (storing paths)
-#include <map>        // For the Adjacency List and Encoding Map
-#include <queue>      // For the Priority Queue used in Dijkstra
-#include <algorithm>  // For std::reverse (path reconstruction)
-#include <limits>     // For std::numeric_limits (setting "Infinity" distances)
-#include <set>        // For keeping track of unique node names
-```
+This document provides a high-level summary and a detailed line-by-line breakdown of the **Smart Morse Network Simulation** implemented in `main.cpp`.
 
 ---
 
-## 2. The MorseSystem Class (Trie + Map)
+## 🚀 High-Level Summary
 
-### The Node Structure
-```cpp
-struct Node {
-    char data;                 // The character (e.g., 'A')
-    std::unique_ptr<Node> dot;  // Pointer to the "Left" child (Dot)
-    std::unique_ptr<Node> dash; // Pointer to the "Right" child (Dash)
-};
-```
-*   **Line-by-line**: We use `std::unique_ptr` so that modern C++ handles memory automatically. When the `MorseSystem` is destroyed, the entire tree is deleted without memory leaks.
+### 1. The Core Concept
+The project simulates a communication network where "Smart Campus" locations (Nodes) are connected by physical links (Edges) with specific costs/weights. A user can send a text message from any node to another. The system automatically:
+1.  **Encodes** the text into Morse Code.
+2.  **Calculates** the shortest physical path between the nodes using **Dijkstra's Algorithm**.
+3.  **Simulates** the transmission by showing the signal passing through each relay node.
+4.  **Decodes** the Morse signal back to text at the final destination using a **Binary Tree (Trie)**.
 
-### Encoding Logic (Text -> Morse)
-```cpp
-std::string encode(const std::string& text) {
-    std::string result;
-    for (char c : text) {
-        char upper_c = std::toupper(c);
-        if (upper_c == ' ') {
-            result += "   "; // Add 3 spaces for word separation
-        } else if (encoding_map.count(upper_c)) {
-            result += encoding_map[upper_c] + " "; // Fetch Morse from map
-        }
-    }
-    return result;
-}
-```
-*   **Logic**: Loops through the user's string. If it sees 'H', it looks up the code in the map and adds `.... ` to the result string.
-
-### Decoding Logic (Morse -> Text)
-```cpp
-char decode_char(const std::string& code) const {
-    Node* current = root.get(); // Start at the root of the tree
-    for (char symbol : code) {
-        if (symbol == '.') current = current->dot.get();
-        else if (symbol == '-') current = current->dash.get();
-    }
-    return current->data; // Return the character found at that leaf
-}
-```
-*   **Logic**: This is a **Trie Traversal**. For every dot or dash in a code, we walk down the tree. If we follow `- .`, we land on node 'N'.
+### 2. Architecture & Algorithms
+*   **Morse Decoding (Binary Tree)**: A `MorseTree` structure handles decoding. It is a prefix tree where `.` means "go left" and `-` means "go right." This ensures $O(L)$ lookup (where $L$ is the length of the signal).
+*   **Morse Encoding (Map)**: A `std::map` is used for encoding text to Morse for instant $O(1)$ character lookup.
+*   **Pathfinding (Dijkstra)**: A greedy algorithm that uses a **Priority Queue** to explore nodes. It finds the path with the minimum sum of edge weights.
+*   **Memory Management**: The project uses **RAII (Resource Acquisition Is Initialization)** with `std::unique_ptr`, ensuring that there are no memory leaks without needing manual `delete` calls.
 
 ---
 
-## 3. The CampusNetwork Class (Graphs & Dijkstra)
+## 📝 Line-by-Line Detailed Explanation
 
-### Adjacency List
-```cpp
-std::map<std::string, std::vector<Edge>> adj;
-```
-*   **Explanation**: This is the heart of the graph. It maps a location name (Key) to a list of its neighbors (Value).
+### Part 1: Header Includes & Data Structures (Lines 1–23)
 
-### Dijkstra’s Algorithm Implementation
-```cpp
-std::vector<std::string> findShortestPath(...) {
-    std::map<std::string, int> dist; // Stores distance from start to every node
-    std::map<std::string, std::string> parent; // Tracks where we came from
-    
-    // Set all distances to "Infinite" initially
-    for (const auto& node : nodes) dist[node] = std::numeric_limits<int>::max();
+- **Line 1–9**: Standard C++ library headers.
+    - `iostream`: Input/Output streams.
+    - `memory`: For `std::unique_ptr` (smart pointers).
+    - `queue`: For the priority queue used in Dijkstra.
+    - `algorithm`: For `std::reverse` to flip the path.
+    - `limits`: To use `std::numeric_limits<int>::max()` (representing Infinity).
+- **Line 17–23**: `struct Node`
+    - This defines a single node in our **Morse Tree**.
+    - `data`: Stores the character (like 'A' or 'B').
+    - `dot` and `dash`: Pointers to the left and right children.
+    - **Line 22**: Constructor initializes the node. `explicit` prevents implicit conversions.
 
-    // Priority Queue: Always picks the node with the SHORTEST current distance
-    std::priority_queue<NodeDist, std::vector<NodeDist>, std::greater<NodeDist>> pq;
+### Part 2: MorseSystem Class (Lines 29–143)
 
-    dist[start] = 0;
-    pq.push({0, start});
+- **Line 31**: Constructor creates the root node using `std::make_unique`.
+- **Line 38–49**: `encode(string text)` function.
+    - Loops through each character.
+    - Converts to uppercase (`std::toupper`).
+    - Uses `encoding_map` to get the Morse string.
+    - Adds 3 spaces for word separation (Line 43).
+- **Line 54–84**: `decode(string message)` function.
+    - This is the main "receiving" logic.
+    - It builds a `current_seq` until it hits a space, then calls `decode_char`.
+    - **Line 71–75**: Checks for word gaps (multiple spaces) to add spaces back into the English text.
+- **Line 93–105**: `decode_char(string code)` function.
+    - This performs the **Tree Traversal**.
+    - It starts at `root` and moves `current = current->dot` or `current = current->dash`.
+    - If it hits a null pointer, the Morse sequence is invalid and returns `?`.
+- **Line 110–123**: `insert(char ch, string code)` function.
+    - This builds the tree during initialization.
+    - It creates nodes as it follows the dot/dash path.
+    - **Line 122**: Simultaneously populates the `encoding_map` (Map) for the encoder.
+- **Line 125–142**: `initialize()` function.
+    - Hardcodes the standard Morse Alphabet (A–Z and 0–9) and inserts them into the system.
 
-    while (!pq.empty()) {
-        std::string u = pq.top().second; // Get node with smallest distance
-        pq.pop();
+### Part 3: CampusNetwork System (Lines 149–234)
 
-        for (const auto& edge : adj[u]) {
-            // RELAXATION: If we found a cheaper way to get here, update it
-            if (dist[u] + edge.weight < dist[edge.to]) {
-                dist[edge.to] = dist[u] + edge.weight;
-                parent[edge.to] = u; // Remember the path
-                pq.push({dist[edge.to], edge.to});
-            }
-        }
-    }
-}
-```
-*   **Viva Note**: Explain that Dijkstra is "Greedy." It always explores the closest node first, guaranteeing the absolute shortest path in a graph with positive weights.
+- **Line 149–152**: `struct Edge`
+    - Represents a physical connection to another node (`to`) and its distance (`weight`).
+- **Line 159–164**: `addConnection(u, v, w)`
+    - Adds a link in the adjacency list (`adj`).
+    - Because the campus path is bidirectional, we add `u->v` and `v->u`.
+- **Line 169–217**: `findShortestPath(...)` — **The Dijkstra Algorithm**.
+    - **Line 170–171**: Maps for `dist` (current shortest distance to a node) and `parent` (to remember the route).
+    - **Line 174**: Sets all initial distances to Infinity.
+    - **Line 181**: Pushes the starting node into the Priority Queue with distance 0.
+    - **Line 183–200**: The **Core Optimization Loop**.
+        - It pulls the "cheapest" node `u`.
+        - It relaxes its neighbors: if `dist[u] + weight < dist[neighbor]`, it updates the neighbor's distance and current parent.
+    - **Line 210–214**: **Path Reconstruction**.
+        - Dijkstra only gives distances. To get the actual path (e.g., A -> B -> C), we follow the `parent` pointers backward from the destination.
+- **Line 219–234**: `displayNodes()`
+    - Simple helper to show the user which campus locations are available.
+
+### Part 4: Simulation Runner (Lines 239–328)
+
+- **Line 244–247**: **Default Scenario Setup**.
+    - Pre-loads the "Hostel", "Library", "Lab", and "Admin" setup for the demo.
+- **Line 253–324**: **The Main Application Loop**.
+    - A standard menu system.
+- **Line 270–305**: **Simulation Implementation (Option 1)**.
+    - Gets user input for Source/Destination and Message.
+    - **Line 278**: Calls Dijkstra to get the path.
+    - **Line 283**: Encodes the message into Morse.
+    - **Line 289–296**: **Simulation Loop**.
+        - Loops through the `path` vector and prints messages to the screen to simulate real-time relaying of the Morse signal.
+    - **Line 304**: Finally calls the decoder at the last node to "receive" the message.
+- **Line 307–314**: **Dynamic Network Update (Option 2)**.
+    - Allows the user to add new nodes (like "Canteen") or change weights between existing ones during runtime.
 
 ---
 
-## 4. The Simulation Runner (Main Function)
-
-### Default Graph Setup
-```cpp
-network.addConnection("Hostel", "Lab", 2);
-network.addConnection("Hostel", "Library", 5);
-```
-*   **Explanation**: This populates our "Smart Campus" with the initial 4 buildings and their distances.
-
-### The Live Simulation Display
-```cpp
-for (size_t i = 0; i < path.size(); ++i) {
-    std::cout << "Step " << i+1 << ": Node [" << path[i] << "] ";
-    // Logic to label Origin, Relay, or Destination...
-    std::cout << "\n   Signal Content: " << encoded_msg << "\n";
-}
-```
-*   **Explanation**: This loop walks through the `path` vector (which Dijkstra filled) and prints the status of the "Signal" at every hop.
-
----
-
-## Summary for Viva
-1.  **Complexity**: Dijkstra is $O(E \log V)$ and Morse decoding is $O(L)$. Both are highly efficient.
-2.  **Safety**: We use `std::unique_ptr` and `std::string` instead of raw pointers and `char*` arrays to ensure the program is crash-proof.
-3.  **Extensibility**: The user can add new buildings (nodes) at runtime, and Dijkstra will recalculate the paths instantly.
+### Conclusion
+This code demonstrates a sophisticated integration of **Tree Traversal**, **Graph Theory (Dijkstra)**, and **Modern C++ Memory Safety**. It effectively separates the "protocol" (Morse) from the "transmission medium" (Network), making it a high-quality project for any technical evaluation.

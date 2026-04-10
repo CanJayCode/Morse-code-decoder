@@ -3,550 +3,928 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Morse Code Decoder</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Tactical Morse Network Simulation</title>
+    <!-- Premium Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Anime.js for High-End Motion -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <style>
         :root {
-            --bg-color: #0b101e;
-            --text-color: #f8fafc;
-            --accent-color: #00f0ff;
-            --secondary-text: #64748b;
-            --border-color: rgba(255, 255, 255, 0.1);
+            --bg: #05070a;
+            --surface: rgba(255, 255, 255, 0.03);
+            --surface-bright: rgba(255, 255, 255, 0.08);
+            --accent: #00f0ff;
+            --accent-glow: rgba(0, 240, 255, 0.3);
+            --pink: #ff0055;
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #e2e8f0;
+            --text-dim: #64748b;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            margin: 0;
-            padding: 3rem 0;
-            font-family: 'Space Grotesk', sans-serif;
-            background-color: var(--bg-color);
-            background-image: radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.08), transparent 25%),
-                              radial-gradient(circle at 85% 30%, rgba(138, 43, 226, 0.1), transparent 25%);
-            color: var(--text-color);
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            overflow: hidden;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            height: 100vh;
         }
 
-        .container {
-            width: 95%;
-            max-width: 1400px;
-            background: rgba(15, 23, 42, 0.6);
-            padding: 2.5rem;
-            border-radius: 24px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--border-color);
+        /* Tactical HUD Elements */
+        .hud-grid {
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            opacity: 0.2;
+            z-index: 0;
+        }
+
+        .hud-vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Top Overlay Command Bar */
+        aside {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            right: 2rem;
+            height: 90px;
+            background: rgba(10, 15, 20, 0.7);
             backdrop-filter: blur(20px);
-            position: relative;
-            z-index: 10;
-        }
-
-        .container::before {
-            content: '';
-            position: absolute;
-            top: -2px; left: -2px; right: -2px; bottom: -2px;
-            background: linear-gradient(45deg, var(--accent-color), transparent, #8a2be2);
-            z-index: -1;
-            border-radius: 26px;
-            opacity: 0.15;
-            transition: opacity 0.5s;
-        }
-        
-        .container:hover::before {
-            opacity: 0.3;
-        }
-
-        .layout-grid {
+            border: 1px solid var(--border);
+            z-index: 100;
+            padding: 0 2rem;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 2rem;
-            align-items: stretch;
-            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
         }
 
-        .left-panel {
+        .mini-log {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem; /* Moved to left to avoid blocking tree */
+            width: 320px;
+            background: rgba(10, 15, 20, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            max-height: 120px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
+            gap: 0.3rem;
+            z-index: 100;
+            backdrop-filter: blur(10px);
         }
 
-        .right-panel {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start; /* Switch to flex-start for scrolling */
-            overflow: auto; /* Allow scrolling if canvas needs space */
-            position: relative;
-            min-height: 600px;
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
-        }
-        
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-        }
-
-        .title-group h1 {
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin-bottom: 0.2rem;
-            text-align: left;
-            letter-spacing: 4px;
+        .brand-section h1 {
+            font-size: 1rem;
             text-transform: uppercase;
-            background: linear-gradient(to right, #fff, var(--accent-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
-            margin-top: 0;
+            letter-spacing: 0.4em;
+            color: var(--accent);
+            white-space: nowrap;
         }
 
-        .title-group p.subtitle {
-            text-align: left;
-            color: var(--secondary-text);
-            font-size: 0.85rem;
-            margin-bottom: 0;
-            letter-spacing: 1px;
+        .brand-section p {
+            display: none; /* Hide subtitle for compact look */
         }
 
         .input-group {
-            position: relative;
-            margin-bottom: 2rem;
-            background: rgba(0, 0, 0, 0.6); /* Darker background for contrast */
-            border-radius: 12px;
-            padding: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5);
-        }
-
-        textarea {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: #ffffff; /* Bright white text */
-            font-size: 2rem;
-            font-family: 'Space Grotesk', Courier, monospace;
-            padding: 1rem 0;
-            resize: none;
-            outline: none;
-            text-align: center;
-            letter-spacing: 8px; /* Tighter letter spacing on dots and dashes */
-            font-weight: 700;
-        }
-
-        textarea::placeholder {
-            color: rgba(255, 255, 255, 0.25);
-            letter-spacing: 5px;
-            font-weight: 400;
-        }
-
-        .controls {
+            flex: 1;
             display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        button {
-            background: rgba(0, 240, 255, 0.05); /* Slight cyan tint */
-            border: 1px solid rgba(0, 240, 255, 0.3); /* Stronger visible border */
-            color: #e2e8f0;
-            padding: 0.8rem 1.8rem;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            letter-spacing: 2px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: uppercase;
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.05);
-        }
-
-        button:hover {
-            background: rgba(0, 240, 255, 0.1);
-            border-color: var(--accent-color);
-            color: var(--accent-color);
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
-            transform: translateY(-2px);
-        }
-        
-        button:active {
-            transform: translateY(0);
-        }
-
-        .output-container {
-            text-align: center;
-            min-height: 80px;
-            padding: 1.2rem;
-            background: rgba(0, 240, 255, 0.03);
-            border-radius: 12px;
-            border: 1px dashed rgba(0, 240, 255, 0.2);
-            position: relative;
-        }
-
-        .output-label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            color: var(--accent-color);
-            letter-spacing: 2px;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        #output {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: #fff;
-            word-wrap: break-word;
-            min-height: 2.5rem;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-            letter-spacing: 4px;
-        }
-
-        /* Canvas Styles */
-        #treeCanvas {
-            width: 100%;
-            height: auto;
-            min-width: 1200px; /* Force minimum width to prevent crushing / layout overlap */
-            display: block;
-            margin: auto;
-        }
-        
-        .tree-label {
-            position: absolute;
-            top: 15px;
-            left: 20px;
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.6);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        .instructions {
-            font-size: 0.8rem;
-            color: var(--secondary-text);
-            text-align: center;
-            background: rgba(0,0,0,0.3);
-            padding: 10px 20px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .instructions span {
-            display: inline-flex;
             align-items: center;
-            margin: 0 12px;
-        }
-        
-        .instructions b {
-            color: var(--accent-color);
-            margin-right: 6px;
-            font-size: 1rem;
+            gap: 2rem;
         }
 
-        @media (max-width: 1000px) {
-            .layout-grid {
-                grid-template-columns: 1fr;
-            }
-            .container { padding: 1.5rem; }
-            .right-panel {
-                min-height: 450px;
-            }
+        .field {
+            display: flex;
+            flex-direction: row; /* Horizontal style */
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        .field label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--text-dim);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        /* Input/Select/Textarea Styling */
+        /* Command Bar Inputs */
+        select, input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            padding: 0.6rem 1rem;
+            color: white;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            outline: none;
+            transition: all 0.2s ease;
+            width: auto;
+            min-width: 120px;
+            appearance: none;
+        }
+
+        textarea { display: none; } /* Replaced by small input */
+        #msgInput { width: 250px; }
+
+        .select-wrapper::after {
+            right: 0.8rem;
+            border-top-width: 4px;
+        }
+
+        .select-wrapper:focus-within::after {
+            transform: translateY(-50%) rotate(180deg);
+            opacity: 1;
+        }
+
+        /* Essential Fix for Option Visibility */
+        select option {
+            background-color: #0d1117;
+            color: white;
+            padding: 12px;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--accent);
+            background: var(--surface-bright);
+            box-shadow: 0 0 25px var(--accent-glow);
+        }
+
+        .primary-btn {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        .primary-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .primary-btn:hover::before {
+            left: 100%;
+        }
+
+        .primary-btn:hover {
+            background: var(--accent);
+            color: var(--bg);
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        /* Tiled Grid Layout */
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
+            width: 100vw;
+            background: var(--bg);
+            padding: 0;
+            gap: 1px;
+            background: var(--border); /* Visual grid divider */
+        }
+
+        .view-panel {
+            background: var(--bg);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 1rem 2rem;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 130px; /* Space for top bar */
+        }
+
+        .panel-title {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4em;
+            color: var(--text-dim);
+            font-weight: 700;
+        }
+
+        #campus-map, #morse-tree {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        .diagnostic-panel {
+            display: contents; /* Handled by grid-main logic */
+        }
+
+        /* Map Styles */
+        .node-circle {
+            fill: #0a0f14;
+            stroke: var(--border);
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .node-circle.active {
+            stroke: var(--accent);
+            fill: rgba(0, 240, 255, 0.1);
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 10px var(--accent));
+        }
+
+        .edge-line {
+            stroke: var(--border);
+            stroke-width: 3px; /* Stronger lines */
+            stroke-dasharray: 4 4;
+            opacity: 0.4;
+        }
+
+        .edge-line.active {
+            stroke: var(--accent);
+            stroke-width: 5px;
+            stroke-dasharray: none;
+            opacity: 1;
+            filter: drop-shadow(0 0 10px var(--accent));
+        }
+
+        .node-label {
+            fill: white; /* Brighter defaults */
+            font-size: 16px; /* Larger text */
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .node-label.active {
+            fill: var(--accent);
+            text-shadow: 0 0 15px var(--accent);
+        }
+
+        /* Signal Pulse */
+        #signal-pulse {
+            fill: var(--accent);
+            filter: drop-shadow(0 0 10px var(--accent));
+            visibility: hidden;
+        }
+
+        /* Console Output */
+        .console {
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            width: 400px;
+            background: rgba(10, 15, 20, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .console-entry {
+            margin-bottom: 0.5rem;
+            border-left: 2px solid var(--border);
+            padding-left: 10px;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .console-entry.success { border-color: var(--accent); color: var(--accent); }
+        .console-entry.system { border-color: var(--text-dim); color: var(--text-dim); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-5px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Custom Decoration */
+        .corner-accent {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--accent);
+            pointer-events: none;
+        }
+        .top-left { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .bottom-right { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+        /* Morse Tree Visualization */
+        #morse-tree {
+            width: 100%;
+            height: 550px; /* Taller tree */
+            flex-grow: 1;
+            margin: 1rem 0;
+        }
+
+        .tree-node {
+            fill: #0a0f14;
+            stroke: var(--border);
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .tree-node.active {
+            stroke: white;
+            fill: var(--accent);
+            filter: drop-shadow(0 0 15px var(--accent));
+        }
+
+        .tree-label {
+            fill: #fff; /* Maximum readability */
+            font-family: var(--font-mono);
+            font-size: 16px; /* Larger letters */
+            font-weight: 900;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            opacity: 0.5; /* Dimmer when not active */
+        }
+
+        .tree-label.active {
+            fill: white;
+            font-size: 22px; /* Pop when active */
+            opacity: 1;
+            filter: drop-shadow(0 0 10px white);
+        }
+
+        .tree-edge {
+            stroke: var(--border);
+            stroke-width: 2px; /* Thicker tree edges */
+            stroke-dasharray: 3 3;
+            opacity: 0.3;
+        }
+
+        .tree-edge.active {
+            stroke: var(--accent);
+            stroke-width: 5px;
+            stroke-dasharray: none;
+            opacity: 1;
+            filter: drop-shadow(0 0 8px var(--accent));
+        }
+
+        .trace-card {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 240, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--accent);
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .trace-card h4 {
+            font-size: 0.5rem;
+            margin-bottom: 0;
+        }
+
+        #current-trace {
+            font-family: var(--font-mono);
+            font-size: 1.4rem;
+            color: var(--accent);
+            letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header-container">
-            <div class="title-group">
-                <h1>Morse Decoder</h1>
-                <p class="subtitle">Real-time binary tree visualization logic</p>
-            </div>
-            
-            <div class="instructions">
-                <span><b>.</b> Dot</span>
-                <span><b>-</b> Dash</span>
-                <span><b>Space</b> Letter break</span>
-                <span><b>3x Space</b> Word break</span>
-            </div>
+    <div class="hud-grid"></div>
+    <div class="hud-vignette"></div>
+
+    <aside>
+        <div class="brand-section">
+            <h1 id="main-title">Morse Net</h1>
         </div>
 
-        <div class="layout-grid">
-            <div class="left-panel">
-                <div class="input-group">
-                    <textarea id="morseInput" rows="2" placeholder=".... . .-.. .-.. ---" spellcheck="false"></textarea>
-                </div>
-
-                <div class="controls">
-                    <button onclick="appendSymbol('.')">Dot (.)</button>
-                    <button onclick="appendSymbol('-')">Dash (-)</button>
-                    <button onclick="appendSpace()">Space</button>
-                    <button onclick="clearAll()">Clear</button>
-                </div>
-
-                <div class="output-container">
-                    <div class="output-label">Decoded Text</div>
-                    <div id="output"></div>
-                </div>
+        <div class="input-group">
+            <div class="field">
+                <label>Network</label>
+                <div class="select-wrapper"><select id="srcNode"></select></div>
+                <div style="color: var(--text-dim)">→</div>
+                <div class="select-wrapper"><select id="destNode"></select></div>
             </div>
 
-            <div class="right-panel">
-                <div class="tree-label">Live BST Traversal</div>
-                <canvas id="treeCanvas" width="2400" height="1100"></canvas>
+            <div class="field">
+                <label>Signal</label>
+                <input type="text" id="msgInput" placeholder="Alpha-numeric...">
+                <div id="morsePreview" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); opacity: 0.8;"></div>
             </div>
+
+            <button class="primary-btn" onclick="startTransmission()">Transmit</button>
         </div>
+    </aside>
+
+    <div class="mini-log" id="console">
+        <div class="console-entry system">> Command Interface Online.</div>
     </div>
 
-    <script>
-        // Morse Tree Node
-        class Node {
-            constructor(data = '') {
-                this.data = data;
-                this.dot = null;
-                this.dash = null;
-            }
-        }
+    <main>
+        <div class="view-panel" style="border-right: 1px solid var(--border)">
+            <div class="panel-header">
+                <span class="panel-title">Strategic Pathfinder</span>
+                <span style="font-size: 10px; color: var(--accent)">Dijkstra Protocol v4</span>
+            </div>
+            <svg id="campus-map" viewBox="0 0 1000 800">
+                <defs>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                <g id="edges-layer"></g>
+                <g id="nodes-layer"></g>
+                <circle id="signal-pulse" r="8" filter="url(#glow)" />
+            </svg>
+        </div>
 
-        // Build the Morse Tree
-        const root = new Node();
-        // ... (alphabet array is same) ... //
+        <div class="view-panel">
+            <div class="panel-header">
+                <span class="panel-title">Neural Decoder Matrix</span>
+                <span style="font-size: 10px; color: var(--accent)">Binary Tree Synthesis</span>
+            </div>
+            <svg id="morse-tree" viewBox="0 0 800 600">
+                <!-- Tree populated by JS -->
+            </svg>
+
+            <div class="trace-card">
+                <h4>Active Path</h4>
+                <div id="current-trace">...</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /**
+         * --- MORSE PROTOCOL ---
+         */
         const alphabet = {
-            'E': '.', 'T': '-', 
-            'I': '..', 'A': '.-', 'N': '-.', 'M': '--',
-            'S': '...', 'U': '..-', 'R': '.-.', 'W': '.--', 'D': '-..', 'K': '-.-', 'G': '--.', 'O': '---',
-            'H': '....', 'V': '...-', 'F': '..-.', 'L': '.-..', 'P': '.--.', 'J': '.---', 'B': '-...', 'X': '-..-', 'C': '-.-.', 'Y': '-.--', 'Z': '--..', 'Q': '--.-',
-            '5': '.....', '4': '....-', '3': '...--', '2': '..---', '1': '.----', '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----'
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
+            'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
+            'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
+            'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+            'Y': '-.--', 'Z': '--..', '1': '.----', '2': '..---', '3': "...--",
+            '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..',
+            '9': '----.', '0': '-----', ' ': '  '
         };
 
-        for (const [char, code] of Object.entries(alphabet)) {
-            let current = root;
-            for (const symbol of code) {
-                if (symbol === '.') {
-                    if (!current.dot) current.dot = new Node();
-                    current = current.dot;
-                } else if (symbol === '-') {
-                    if (!current.dash) current.dash = new Node();
-                    current = current.dash;
-                }
-            }
-            current.data = char;
+        function encodeMorse(text) {
+            return text.toUpperCase().split('').map(c => alphabet[c] || '').join(' ');
         }
 
-        // -----------------------------------------------------
-        // CANVAS VISUALIZATION LOGIC
-        // -----------------------------------------------------
-        const canvas = document.getElementById('treeCanvas');
-        const ctx = canvas.getContext('2d');
+        /**
+         * --- NETWORK DATA ---
+         */
+        const nodes = {
+            "Hostel": { x: 200, y: 300, icon: 'H' },
+            "Lab": { x: 450, y: 150, icon: 'L' },
+            "Library": { x: 300, y: 550, icon: 'B' },
+            "Admin": { x: 750, y: 450, icon: 'A' },
+            "Canteen": { x: 700, y: 150, icon: 'C' },
+            "Gym": { x: 100, y: 650, icon: 'G' },
+            "Gate": { x: 50, y: 350, icon: 'E' },
+            "Park": { x: 550, y: 650, icon: 'P' },
+            "Audit": { x: 900, y: 600, icon: 'D' },
+            "Tower": { x: 800, y: 200, icon: 'T' },
+            "Cafe": { x: 580, y: 380, icon: 'F' }
+        };
 
-        function assignNodeCoords(node, x, y, dx, depth) {
-            if(!node) return;
-            node.x = x;
-            node.y = y;
-            // Strict factor of 2 reduction cleanly separates the binary tree logically 
-            const reduce = 2.0; 
-            const newDx = dx / reduce;
-            const dy = depth === 0 ? 180 : 160;
+        const edges = [
+            { from: "Hostel", to: "Lab", weight: 2 },
+            { from: "Hostel", to: "Library", weight: 5 },
+            { from: "Hostel", to: "Gate", weight: 3 },
+            { from: "Lab", to: "Admin", weight: 4 },
+            { from: "Lab", to: "Canteen", weight: 2 },
+            { from: "Library", to: "Admin", weight: 3 },
+            { from: "Library", to: "Gym", weight: 2 },
+            { from: "Library", to: "Park", weight: 4 },
+            { from: "Canteen", to: "Tower", weight: 3 },
+            { from: "Admin", to: "Audit", weight: 6 },
+            { from: "Admin", to: "Cafe", weight: 2 },
+            { from: "Gate", to: "Gym", weight: 5 },
+            { from: "Park", to: "Audit", weight: 3 },
+            { from: "Tower", to: "Admin", weight: 5 }
+        ];
 
-            if (node.dot) assignNodeCoords(node.dot, x - dx, y + dy, newDx, depth + 1);
-            if (node.dash) assignNodeCoords(node.dash, x + dx, y + dy, newDx, depth + 1);
-        }
-        
-        // At 2400 width, starting dx=600 cleanly distributes the whole 5-depth tree left and right.
-        assignNodeCoords(root, canvas.width / 2, 70, canvas.width / 4, 0);
+        /**
+         * --- DIJKSTRA ALGORITHM ---
+         */
+        function findShortestPath(start, end) {
+            const dist = {};
+            const prev = {};
+            const queue = [];
 
-        function isPathActive(path, activeSeq) {
-            if(!activeSeq) return path === '';
-            return activeSeq.startsWith(path);
-        }
+            Object.keys(nodes).forEach(node => {
+                dist[node] = Infinity;
+                prev[node] = null;
+                queue.push(node);
+            });
 
-        function drawEdges(node, currentPath, activeSeq) {
-            if(!node) return;
-            const active = isPathActive(currentPath, activeSeq);
+            dist[start] = 0;
 
-            if(node.dot) {
-                const childActive = active && isPathActive(currentPath + '.', activeSeq);
-                ctx.beginPath();
-                ctx.moveTo(node.x, node.y);
-                ctx.lineTo(node.dot.x, node.dot.y);
-                ctx.lineWidth = childActive ? 6 : 2; /* scaled up for 2400 frame */
-                ctx.strokeStyle = childActive ? '#00f0ff' : 'rgba(255, 255, 255, 0.15)';
-                ctx.shadowBlur = childActive ? 25 : 0;
-                ctx.shadowColor = '#00f0ff';
-                ctx.stroke();
-                drawEdges(node.dot, currentPath + '.', activeSeq);
-            }
-            if(node.dash) {
-                const childActive = active && isPathActive(currentPath + '-', activeSeq);
-                ctx.beginPath();
-                ctx.moveTo(node.x, node.y);
-                ctx.lineTo(node.dash.x, node.dash.y);
-                ctx.lineWidth = childActive ? 6 : 2; /* scaled up for 2400 frame */
-                ctx.strokeStyle = childActive ? '#00f0ff' : 'rgba(255, 255, 255, 0.15)';
-                ctx.shadowBlur = childActive ? 25 : 0;
-                ctx.shadowColor = '#00f0ff';
-                ctx.stroke();
-                drawEdges(node.dash, currentPath + '-', activeSeq);
-            }
-        }
+            while (queue.length > 0) {
+                queue.sort((a, b) => dist[a] - dist[b]);
+                const u = queue.shift();
 
-        function drawNodes(node, currentPath, activeSeq) {
-            if(!node) return;
-            const active = isPathActive(currentPath, activeSeq);
-            const isCurrent = currentPath === activeSeq && activeSeq !== '';
-            const isRoot = currentPath === '';
+                if (u === end) break;
 
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, 28, 0, Math.PI*2); /* Scaled slightly larger for resolution */
-            
-            // Fill
-            if (isCurrent) {
-                ctx.fillStyle = '#ff007f'; // Hot pink focus
-                ctx.shadowBlur = 35;
-                ctx.shadowColor = '#ff007f';
-            } else if (active) {
-                ctx.fillStyle = '#00f0ff'; // Neon Cyan path
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = '#00f0ff';
-            } else if (isRoot && activeSeq === '') {
-                ctx.fillStyle = '#ff007f'; // Start state
-                ctx.shadowBlur = 35;
-                ctx.shadowColor = '#ff007f';
-            } else {
-                ctx.fillStyle = '#1e293b'; // Lighter inactive backdrop
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#000'; 
-            }
-            ctx.fill();
+                edges.forEach(edge => {
+                    let v = null;
+                    if (edge.from === u) v = edge.to;
+                    else if (edge.to === u) v = edge.from;
 
-            // Border
-            ctx.lineWidth = (active || isCurrent) ? 4 : 3;
-            ctx.strokeStyle = (active || isCurrent) ? '#fff' : 'rgba(255,255,255,0.4)';
-            ctx.stroke();
-
-            // Text
-            ctx.shadowBlur = 0;
-            ctx.font = '22px "Space Grotesk"';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fontWeight = 'bold';
-            // Use significantly brighter text for inactive state
-            ctx.fillStyle = (active || isCurrent || (isRoot && activeSeq === '')) ? '#ffffff' : '#f8fafc';
-            const displayChar = isRoot ? 'RT' : node.data;
-            ctx.fillText(displayChar, node.x, node.y);
-
-            if(node.dot) drawNodes(node.dot, currentPath + '.', activeSeq);
-            if(node.dash) drawNodes(node.dash, currentPath + '-', activeSeq);
-        }
-
-        function renderTree(activeSequence = '') {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawEdges(root, '', activeSequence);
-            drawNodes(root, '', activeSequence);
-        }
-
-        // Initial render
-        renderTree();
-
-        // -----------------------------------------------------
-
-        function decodeChar(code) {
-            let current = root;
-            for (const symbol of code) {
-                if (symbol === '.') {
-                    if (!current.dot) return '?';
-                    current = current.dot;
-                } else if (symbol === '-') {
-                    if (!current.dash) return '?';
-                    current = current.dash;
-                }
-            }
-            return current.data || '?';
-        }
-
-        function decodeMessage(message) {
-            if (!message.trim()) return '';
-            
-            let result = '';
-            let currentSymbolSeq = '';
-            
-            for (let i = 0; i < message.length; ++i) {
-                const c = message[i];
-                
-                if (c === '.' || c === '-') {
-                    currentSymbolSeq += c;
-                } else if (c === ' ') {
-                    if (currentSymbolSeq.length > 0) {
-                        result += decodeChar(currentSymbolSeq);
-                        currentSymbolSeq = '';
-                    }
-                    
-                    if (i + 1 < message.length && message[i+1] === ' ') {
-                        if (result.length === 0 || result[result.length - 1] !== ' ') {
-                            result += ' ';
+                    if (v && queue.includes(v)) {
+                        const alt = dist[u] + edge.weight;
+                        if (alt < dist[v]) {
+                            dist[v] = alt;
+                            prev[v] = u;
                         }
                     }
+                });
+            }
+
+            const path = [];
+            let curr = end;
+            while (curr) {
+                path.unshift(curr);
+                curr = prev[curr];
+            }
+            return { path, cost: dist[end] };
+        }
+
+        /**
+         * --- RENDER ENGINE ---
+         */
+        const nodesLayer = document.getElementById('nodes-layer');
+        const edgesLayer = document.getElementById('edges-layer');
+        const srcSelect = document.getElementById('srcNode');
+        const destSelect = document.getElementById('destNode');
+
+        function initMap() {
+            // Draw Edges
+            edges.forEach((edge, index) => {
+                const n1 = nodes[edge.from];
+                const n2 = nodes[edge.to];
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", n1.x);
+                line.setAttribute("y1", n1.y);
+                line.setAttribute("x2", n2.x);
+                line.setAttribute("y2", n2.y);
+                line.classList.add("edge-line");
+                line.id = `edge-${edge.from}-${edge.to}`;
+                edgesLayer.appendChild(line);
+
+                // Weight Label
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", (n1.x + n2.x) / 2);
+                text.setAttribute("y", (n1.y + n2.y) / 2 - 10);
+                text.setAttribute("text-anchor", "middle");
+                text.style.fill = "#ffffff"; /* Clear white weights */
+                text.style.fontSize = "12px"; /* Larger weights */
+                text.style.fontWeight = "800";
+                text.style.fontFamily = "var(--font-mono)";
+                text.style.paintOrder = "stroke";
+                text.style.stroke = "#000";
+                text.style.strokeWidth = "3px";
+                text.textContent = edge.weight;
+                edgesLayer.appendChild(text);
+            });
+
+            // Draw Nodes
+            Object.entries(nodes).forEach(([name, data]) => {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.id = `node-group-${name}`;
+
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", data.x);
+                circle.setAttribute("cy", data.y);
+                circle.setAttribute("r", "25");
+                circle.classList.add("node-circle");
+                circle.id = `node-${name}`;
+
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute("x", data.x);
+                label.setAttribute("y", data.y + 45);
+                label.setAttribute("text-anchor", "middle");
+                label.classList.add("node-label");
+                label.style.fill = "#ffffff";
+                label.style.fontWeight = "600";
+                label.textContent = name;
+                label.id = `label-${name}`;
+
+                const icon = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                icon.setAttribute("x", data.x);
+                icon.setAttribute("y", data.y + 7);
+                icon.setAttribute("text-anchor", "middle");
+                icon.style.fill = "white";
+                icon.style.fontSize = "20px";
+                icon.style.fontWeight = "900";
+                icon.style.fontFamily = "var(--font-mono)";
+                icon.textContent = data.icon;
+
+                g.appendChild(circle);
+                g.appendChild(icon);
+                g.appendChild(label);
+                nodesLayer.appendChild(g);
+
+                // Populate selects
+                const opt1 = new Option(name, name);
+                const opt2 = new Option(name, name);
+                srcSelect.add(opt1);
+                destSelect.add(opt2);
+            });
+
+            destSelect.value = "Admin";
+        }
+
+        /**
+         * --- ANIMATION CONTROL ---
+         */
+        const msgInput = document.getElementById('msgInput');
+        const morsePreview = document.getElementById('morsePreview');
+        const consoleEl = document.getElementById('console');
+
+
+        function log(msg, type = 'system') {
+            const div = document.createElement('div');
+            div.className = `console-entry ${type}`;
+            div.textContent = `> ${msg}`;
+            consoleEl.appendChild(div);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function startTransmission() {
+            const src = srcSelect.value;
+            const dest = destSelect.value;
+            const text = msgInput.value;
+            
+            if (!text) {
+                log("Abort: No signal content provided.", "success");
+                return;
+            }
+
+            const { path, cost } = findShortestPath(src, dest);
+            const morse = encodeMorse(text);
+
+            log(`Initiating pathfind: ${src} to ${dest}...`);
+            log(`Optimal route found. Cost: ${cost} units.`, "success");
+            log(`Encoding signal: ${text} -> ${morse}`);
+
+            animateTransmission(path, morse);
+        }
+
+        async function animateTransmission(path, morse) {
+            // Reset visuals
+            document.querySelectorAll('.edge-line, .node-circle, .node-label').forEach(el => el.classList.remove('active'));
+            
+            const pulse = document.getElementById('signal-pulse');
+            pulse.style.visibility = 'visible';
+
+
+            for (let i = 0; i < path.length; i++) {
+                const currNode = path[i];
+                document.getElementById(`node-${currNode}`).classList.add('active');
+                document.getElementById(`label-${currNode}`).classList.add('active');
+                
+                log(`Signal arrived at [${currNode}]. Relaying...`);
+
+                if (i < path.length - 1) {
+                    const nextNode = path[i + 1];
+                    const startPos = nodes[currNode];
+                    const endPos = nodes[nextNode];
+                    
+                    // Find and activate edge
+                    const edgeId = `edge-${currNode}-${nextNode}`;
+                    const altEdgeId = `edge-${nextNode}-${currNode}`;
+                    const edge = document.getElementById(edgeId) || document.getElementById(altEdgeId);
+                    if (edge) edge.classList.add('active');
+
+                    // Animate Pulse along link
+                    await anime({
+                        targets: pulse,
+                        cx: [startPos.x, endPos.x],
+                        cy: [startPos.y, endPos.y],
+                        duration: 800,
+                        easing: 'easeInOutQuad'
+                    }).finished;
                 }
             }
-            
-            if (currentSymbolSeq.length > 0) {
-                result += decodeChar(currentSymbolSeq);
-            }
-            
-            return result;
+
+            pulse.style.visibility = 'hidden';
+            log(`Transmission Complete at Destination.`, "success");
+            log(`Payload Decoded: ${textToReadable(morse)}`, "success");
         }
 
-        const inputEl = document.getElementById('morseInput');
-        const outputEl = document.getElementById('output');
-
-        function updateOutput() {
-            const val = inputEl.value;
-            outputEl.textContent = decodeMessage(val);
-            
-            // Extract the sequence currently being typed to visualize it
-            const parts = val.split(' ');
-            const activeVal = parts.length > 0 ? parts[parts.length - 1] : '';
-            renderTree(activeVal);
+        function textToReadable(morse) {
+            const reverseAlphabet = Object.fromEntries(Object.entries(alphabet).map(([k, v]) => [v, k]));
+            return morse.split('   ').map(word => 
+                word.split(' ').map(char => reverseAlphabet[char] || '').join('')
+            ).join(' ');
         }
 
-        inputEl.addEventListener('input', (e) => {
-            // Filter invalid characters
-            const val = e.target.value;
-            const filtered = val.replace(/[^.\- ]/g, '');
-            if (val !== filtered) {
-                e.target.value = filtered;
+        /**
+         * --- DECODER TREE LOGIC ---
+         */
+        const treeSvg = document.getElementById('morse-tree');
+        const currentTrace = document.getElementById('current-trace');
+        
+        class MorseNode {
+            constructor(char = '') {
+                this.char = char;
+                this.dot = null;
+                this.dash = null;
+                this.id = Math.random().toString(36).substr(2, 9);
             }
-            updateOutput();
+        }
+
+        const morseTreeRoot = new MorseNode();
+
+        function buildDecoderTree() {
+            Object.entries(alphabet).forEach(([char, code]) => {
+                if (char === ' ') return;
+                let curr = morseTreeRoot;
+                for (const symbol of code) {
+                    if (symbol === '.') {
+                        if (!curr.dot) curr.dot = new MorseNode();
+                        curr = curr.dot;
+                    } else {
+                        if (!curr.dash) curr.dash = new MorseNode();
+                        curr = curr.dash;
+                    }
+                }
+                curr.char = char;
+            });
+        }
+
+        function renderTree() {
+            const levels = 5;
+            const nodesToRender = [];
+            const edgesToRender = [];
+
+            function traverse(node, level, x, xRange) {
+                if (!node || level > levels) return;
+
+                const y = 50 + level * 100; /* More vertical spacing */
+                nodesToRender.push({ node, x, y });
+
+                const nextXRange = xRange / 2;
+                if (node.dot) {
+                    const nextX = x - nextXRange;
+                    const nextY = 50 + (level + 1) * 100;
+                    edgesToRender.push({ x1: x, y1: y, x2: nextX, y2: nextY, id: `edge-${node.id}-${node.dot.id}` });
+                    traverse(node.dot, level + 1, nextX, nextXRange);
+                }
+                if (node.dash) {
+                    const nextX = x + nextXRange;
+                    const nextY = 50 + (level + 1) * 100;
+                    edgesToRender.push({ x1: x, y1: y, x2: nextX, y2: nextY, id: `edge-${node.id}-${node.dash.id}` });
+                    traverse(node.dash, level + 1, nextX, nextXRange);
+                }
+            }
+
+            traverse(morseTreeRoot, 0, 400, 380); /* Centered in 800px width with 380px initial spread */
+
+            // Draw Edges
+            edgesToRender.forEach(e => {
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", e.x1);
+                line.setAttribute("y1", e.y1);
+                line.setAttribute("x2", e.x2);
+                line.setAttribute("y2", e.y2);
+                line.classList.add("tree-edge");
+                line.id = e.id;
+                treeSvg.appendChild(line);
+            });
+
+            // Draw Nodes
+            nodesToRender.forEach(n => {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", n.x);
+                circle.setAttribute("cy", n.y);
+                circle.setAttribute("r", n.node === morseTreeRoot ? "6" : "12");
+                circle.classList.add("tree-node");
+                circle.id = `tree-node-${n.node.id}`;
+                
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute("x", n.x);
+                label.setAttribute("y", n.y);
+                label.classList.add("tree-label");
+                label.textContent = n.node.char;
+                label.id = `tree-label-${n.node.id}`;
+                
+                g.appendChild(circle);
+                g.appendChild(label);
+                treeSvg.appendChild(g);
+            });
+        }
+
+        async function highlightTreePath(char) {
+            const upperChar = char.toUpperCase();
+            const code = alphabet[upperChar];
+            
+            // Reset all
+            document.querySelectorAll('.tree-node, .tree-edge, .tree-label').forEach(el => el.classList.remove('active'));
+            
+            if (!code) {
+                currentTrace.textContent = "...";
+                return;
+            }
+
+            currentTrace.textContent = "";
+            let curr = morseTreeRoot;
+            let pathNodes = [curr];
+            let pathEdges = [];
+
+            document.getElementById(`tree-node-${curr.id}`).classList.add('active');
+
+            for (const symbol of code) {
+                const next = symbol === '.' ? curr.dot : curr.dash;
+                if (next) {
+                    pathEdges.push(`edge-${curr.id}-${next.id}`);
+                    pathNodes.push(next);
+                    curr = next;
+                }
+            }
+
+            // Animate trace with small delays
+            for (let i = 0; i < pathNodes.length; i++) {
+                const node = pathNodes[i];
+                document.getElementById(`tree-node-${node.id}`).classList.add('active');
+                if (node.char) document.getElementById(`tree-label-${node.id}`).classList.add('active');
+                
+                if (i > 0) {
+                    document.getElementById(pathEdges[i-1]).classList.add('active');
+                }
+                
+                currentTrace.textContent += (i === 0 ? "ROOT" : (code[i-1] === '.' ? "·" : "−"));
+                await new Promise(r => setTimeout(r, 100));
+            }
+            
+            currentTrace.textContent += ` ➔ ${upperChar}`;
+        }
+
+        msgInput.addEventListener('input', (e) => {
+            const val = msgInput.value;
+            const lastChar = val.slice(-1);
+            morsePreview.textContent = encodeMorse(val);
+            if (lastChar) highlightTreePath(lastChar);
         });
 
-        function appendSymbol(sym) {
-            inputEl.value += sym;
-            inputEl.focus();
-            updateOutput();
-        }
+        initMap();
+        buildDecoderTree();
+        renderTree();
 
-        function appendSpace() {
-            inputEl.value += ' ';
-            inputEl.focus();
-            updateOutput();
-        }
-
-        function clearAll() {
-            inputEl.value = '';
-            inputEl.focus();
-            updateOutput();
-        }
     </script>
 </body>
 </html>
