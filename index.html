@@ -258,47 +258,50 @@
 
         /* Map Styles */
         .node-circle {
-            fill: #0a0f14;
-            stroke: var(--border);
-            stroke-width: 2px;
+            fill: rgba(255, 255, 255, 0.07);
+            stroke: rgba(0, 240, 255, 0.15);
+            stroke-width: 1.5px;
             transition: all 0.3s ease;
         }
 
         .node-circle.active {
             stroke: var(--accent);
-            fill: rgba(0, 240, 255, 0.1);
-            stroke-width: 4px;
-            filter: drop-shadow(0 0 10px var(--accent));
+            fill: rgba(0, 240, 255, 0.15);
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 8px var(--accent-glow));
         }
 
         .edge-line {
-            stroke: var(--border);
-            stroke-width: 3px; /* Stronger lines */
+            stroke: var(--accent);
+            stroke-width: 2px;
             stroke-dasharray: 4 4;
-            opacity: 0.4;
+            opacity: 0.15;
+            transition: all 0.3s ease;
         }
 
         .edge-line.active {
             stroke: var(--accent);
-            stroke-width: 5px;
+            stroke-width: 4px;
             stroke-dasharray: none;
-            opacity: 1;
-            filter: drop-shadow(0 0 10px var(--accent));
+            opacity: 0.8;
+            filter: drop-shadow(0 0 8px var(--accent-glow));
         }
 
         .node-label {
-            fill: white; /* Brighter defaults */
-            font-size: 16px; /* Larger text */
-            font-weight: 800;
+            fill: var(--text-main);
+            font-size: 14px;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.15em;
             pointer-events: none;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            opacity: 0.7;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
         .node-label.active {
-            fill: var(--accent);
-            text-shadow: 0 0 15px var(--accent);
+            fill: white;
+            opacity: 1;
+            text-shadow: 0 0 10px var(--accent-glow);
         }
 
         /* Signal Pulse */
@@ -360,49 +363,50 @@
         }
 
         .tree-node {
-            fill: #0a0f14;
-            stroke: var(--border);
-            stroke-width: 2px;
+            fill: rgba(255, 255, 255, 0.05);
+            stroke: rgba(0, 240, 255, 0.1);
+            stroke-width: 1.5px;
             transition: all 0.3s ease;
         }
 
         .tree-node.active {
-            stroke: white;
-            fill: var(--accent);
-            filter: drop-shadow(0 0 15px var(--accent));
+            stroke: var(--accent);
+            fill: rgba(0, 240, 255, 0.2);
+            filter: drop-shadow(0 0 10px var(--accent-glow));
         }
 
         .tree-label {
-            fill: #fff; /* Maximum readability */
+            fill: var(--text-main);
             font-family: var(--font-mono);
-            font-size: 16px; /* Larger letters */
-            font-weight: 900;
+            font-size: 13px;
+            font-weight: 600;
             text-anchor: middle;
             dominant-baseline: middle;
             pointer-events: none;
-            opacity: 0.5; /* Dimmer when not active */
+            opacity: 0.4;
         }
 
         .tree-label.active {
             fill: white;
-            font-size: 22px; /* Pop when active */
+            font-size: 18px;
             opacity: 1;
-            filter: drop-shadow(0 0 10px white);
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
         }
 
         .tree-edge {
-            stroke: var(--border);
-            stroke-width: 2px; /* Thicker tree edges */
-            stroke-dasharray: 3 3;
-            opacity: 0.3;
+            stroke: var(--accent);
+            stroke-width: 1.5px;
+            stroke-dasharray: 2 2;
+            opacity: 0.15;
+            transition: all 0.3s ease;
         }
 
         .tree-edge.active {
             stroke: var(--accent);
-            stroke-width: 5px;
+            stroke-width: 3.5px;
             stroke-dasharray: none;
-            opacity: 1;
-            filter: drop-shadow(0 0 8px var(--accent));
+            opacity: 0.8;
+            filter: drop-shadow(0 0 8px var(--accent-glow));
         }
 
         .trace-card {
@@ -628,13 +632,13 @@
                 text.setAttribute("x", (n1.x + n2.x) / 2);
                 text.setAttribute("y", (n1.y + n2.y) / 2 - 10);
                 text.setAttribute("text-anchor", "middle");
-                text.style.fill = "#ffffff"; /* Clear white weights */
-                text.style.fontSize = "12px"; /* Larger weights */
-                text.style.fontWeight = "800";
+                text.style.fill = "var(--text-dim)"; /* Dimmer weights */
+                text.style.fontSize = "10px";
+                text.style.fontWeight = "600";
                 text.style.fontFamily = "var(--font-mono)";
                 text.style.paintOrder = "stroke";
-                text.style.stroke = "#000";
-                text.style.strokeWidth = "3px";
+                text.style.stroke = "var(--bg)";
+                text.style.strokeWidth = "2px";
                 text.textContent = edge.weight;
                 edgesLayer.appendChild(text);
             });
@@ -656,7 +660,7 @@
                 label.setAttribute("y", data.y + 45);
                 label.setAttribute("text-anchor", "middle");
                 label.classList.add("node-label");
-                label.style.fill = "#ffffff";
+                label.style.fill = "var(--text-main)";
                 label.style.fontWeight = "600";
                 label.textContent = name;
                 label.id = `label-${name}`;
@@ -665,10 +669,11 @@
                 icon.setAttribute("x", data.x);
                 icon.setAttribute("y", data.y + 7);
                 icon.setAttribute("text-anchor", "middle");
-                icon.style.fill = "white";
-                icon.style.fontSize = "20px";
-                icon.style.fontWeight = "900";
+                icon.style.fill = "var(--accent)";
+                icon.style.fontSize = "18px";
+                icon.style.fontWeight = "700";
                 icon.style.fontFamily = "var(--font-mono)";
+                icon.style.opacity = "0.8";
                 icon.textContent = data.icon;
 
                 g.appendChild(circle);
